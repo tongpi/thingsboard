@@ -1,5 +1,5 @@
 /**
- * Copyright © 2016-2018 The Thingsboard Authors
+ * Copyright © 2016-2020 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@ public class ServerAddress implements Comparable<ServerAddress>, Serializable {
 
     private final String host;
     private final int port;
+    private final ServerType serverType;
 
     @Override
     public int compareTo(ServerAddress o) {

@@ -1,5 +1,5 @@
 /**
- * Copyright © 2016-2018 The Thingsboard Authors
+ * Copyright © 2016-2020 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,10 +15,9 @@
  */
 package org.thingsboard.server.actors.stats;
 
-import akka.event.Logging;
-import akka.event.LoggingAdapter;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.extern.slf4j.Slf4j;
 import org.thingsboard.server.actors.ActorSystemContext;
 import org.thingsboard.server.actors.service.ContextAwareActor;
 import org.thingsboard.server.actors.service.ContextBasedCreator;
@@ -27,9 +26,9 @@ import org.thingsboard.server.common.data.Event;
 import org.thingsboard.server.common.msg.TbActorMsg;
 import org.thingsboard.server.common.msg.cluster.ServerAddress;
 
+@Slf4j
 public class StatsActor extends ContextAwareActor {
 
-    private final LoggingAdapter logger = Logging.getLogger(getContext().system(), this);
     private final ObjectMapper mapper = new ObjectMapper();
 
     public StatsActor(ActorSystemContext context) {
@@ -43,13 +42,13 @@ public class StatsActor extends ContextAwareActor {
     }
 
     @Override
-    public void onReceive(Object msg) throws Exception {
-        logger.debug("Received message: {}", msg);
+    public void onReceive(Object msg) {
+        log.debug("Received message: {}", msg);
         if (msg instanceof StatsPersistMsg) {
             try {
                 onStatsPersistMsg((StatsPersistMsg) msg);
             } catch (Exception e) {
-                logger.warning("Failed to persist statistics: {}", msg, e);
+                log.warn("Failed to persist statistics: {}", msg, e);
             }
         }
     }
@@ -75,7 +74,7 @@ public class StatsActor extends ContextAwareActor {
         }
 
         @Override
-        public StatsActor create() throws Exception {
+        public StatsActor create() {
             return new StatsActor(context);
         }
     }

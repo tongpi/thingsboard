@@ -1,5 +1,5 @@
 /**
- * Copyright © 2016-2018 The Thingsboard Authors
+ * Copyright © 2016-2020 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,7 @@
 package org.thingsboard.server.actors.device;
 
 import lombok.Data;
-import org.thingsboard.server.common.msg.cluster.ServerAddress;
-import org.thingsboard.server.common.msg.session.SessionType;
-
-import java.util.Optional;
+import org.thingsboard.server.gen.transport.TransportProtos.SessionType;
 
 /**
  * @author Andrew Shvayka
@@ -27,5 +24,6 @@ import java.util.Optional;
 @Data
 public class SessionInfo {
     private final SessionType type;
-    private final Optional<ServerAddress> server;
+    private final String nodeId;
+    private long lastActivityTime;
 }

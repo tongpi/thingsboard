@@ -1,5 +1,5 @@
 /**
- * Copyright © 2016-2018 The Thingsboard Authors
+ * Copyright © 2016-2020 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,25 +16,16 @@
 package org.thingsboard.server.common.msg.core;
 
 import lombok.Data;
-import org.thingsboard.server.common.msg.session.FromDeviceMsg;
-import org.thingsboard.server.common.msg.session.SessionMsgType;
-import org.thingsboard.server.common.msg.session.SessionMsgType;
-import org.thingsboard.server.common.msg.session.ToDeviceMsg;
 
 /**
  * @author Andrew Shvayka
  */
 @Data
-public class ToServerRpcResponseMsg implements ToDeviceMsg {
+public class ToServerRpcResponseMsg {
 
     private final int requestId;
     private final String data;
 
-    public SessionMsgType getSessionMsgType() {
-        return SessionMsgType.TO_SERVER_RPC_RESPONSE;
-    }
-
-    @Override
     public boolean isSuccess() {
         return true;
     }

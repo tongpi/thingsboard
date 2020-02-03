@@ -1,5 +1,5 @@
 /*
- * Copyright © 2016-2018 The Thingsboard Authors
+ * Copyright © 2016-2020 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -209,8 +209,8 @@ export default class TbCanvasDigitalGauge {
                 }
                 var value = tvPair[1];
                 if(value !== this.gauge.value) {
-                    this.gauge.value = value;
                     this.gauge._value = value;
+                    this.gauge.value = value;
                 } else if (this.localSettings.showTimestamp && this.gauge.timestamp != timestamp) {
                     this.gauge.timestamp = timestamp;
                 }

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2016-2018 The Thingsboard Authors
+ * Copyright © 2016-2020 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -67,7 +67,7 @@ function MaterialIconSelect($compile, $templateCache, $document, $mdDialog) {
                 templateUrl: materialIconsDialogTemplate,
                 parent: angular.element($document[0].body),
                 locals: {icon: scope.icon},
-                skipHide: true,
+                multiple: true,
                 fullscreen: true,
                 targetEvent: $event
             }).then(function (icon) {

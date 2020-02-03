@@ -1,5 +1,5 @@
 /**
- * Copyright © 2016-2018 The Thingsboard Authors
+ * Copyright © 2016-2020 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 package org.thingsboard.server.service.cluster.discovery;
 
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.DependsOn;
@@ -62,13 +63,5 @@ public class DummyDiscoveryService implements DiscoveryService {
         return Collections.emptyList();
     }
 
-    @Override
-    public boolean addListener(DiscoveryServiceListener listener) {
-        return false;
-    }
 
-    @Override
-    public boolean removeListener(DiscoveryServiceListener listener) {
-        return false;
-    }
 }

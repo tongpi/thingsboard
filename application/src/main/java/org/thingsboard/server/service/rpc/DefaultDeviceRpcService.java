@@ -1,5 +1,5 @@
 /**
- * Copyright © 2016-2018 The Thingsboard Authors
+ * Copyright © 2016-2020 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,10 +24,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
+import org.thingsboard.common.util.ThingsBoardThreadFactory;
 import org.thingsboard.rule.engine.api.RpcError;
 import org.thingsboard.rule.engine.api.msg.ToDeviceActorNotificationMsg;
 import org.thingsboard.server.actors.service.ActorService;
 import org.thingsboard.server.common.data.DataConstants;
+import org.thingsboard.server.common.data.Device;
 import org.thingsboard.server.common.data.id.DeviceId;
 import org.thingsboard.server.common.data.id.TenantId;
 import org.thingsboard.server.common.msg.TbMsg;
@@ -38,6 +40,7 @@ import org.thingsboard.server.common.msg.cluster.ServerAddress;
 import org.thingsboard.server.common.msg.core.ToServerRpcResponseMsg;
 import org.thingsboard.server.common.msg.rpc.ToDeviceRpcRequest;
 import org.thingsboard.server.common.msg.system.ServiceToRuleEngineMsg;
+import org.thingsboard.server.dao.device.DeviceService;
 import org.thingsboard.server.gen.cluster.ClusterAPIProtos;
 import org.thingsboard.server.service.cluster.routing.ClusterRoutingService;
 import org.thingsboard.server.service.cluster.rpc.ClusterRpcService;
@@ -68,6 +71,9 @@ public class DefaultDeviceRpcService implements DeviceRpcService {
     private ClusterRpcService rpcService;
 
     @Autowired
+    private DeviceService deviceService;
+
+    @Autowired
     @Lazy
     private ActorService actorService;
 
@@ -78,7 +84,7 @@ public class DefaultDeviceRpcService implements DeviceRpcService {
 
     @PostConstruct
     public void initExecutor() {
-        rpcCallBackExecutor = Executors.newSingleThreadScheduledExecutor();
+        rpcCallBackExecutor = Executors.newSingleThreadScheduledExecutor(ThingsBoardThreadFactory.forName("rpc-callback"));
     }
 
     @PreDestroy
@@ -90,7 +96,7 @@ public class DefaultDeviceRpcService implements DeviceRpcService {
 
     @Override
     public void processRestAPIRpcRequestToRuleEngine(ToDeviceRpcRequest request, Consumer<FromDeviceRpcResponse> responseConsumer) {
-        log.trace("[{}] Processing local rpc call to rule engine [{}]", request.getTenantId(), request.getDeviceId());
+        log.trace("[{}][{}] Processing REST API call to rule engine [{}]", request.getTenantId(), request.getId(), request.getDeviceId());
         UUID requestId = request.getId();
         localToRuleEngineRpcRequests.put(requestId, responseConsumer);
         sendRpcRequestToRuleEngine(request);
@@ -98,31 +104,11 @@ public class DefaultDeviceRpcService implements DeviceRpcService {
     }
 
     @Override
-    public void processRestAPIRpcResponseFromRuleEngine(FromDeviceRpcResponse response) {
-        UUID requestId = response.getId();
-        Consumer<FromDeviceRpcResponse> consumer = localToRuleEngineRpcRequests.remove(requestId);
-        if (consumer != null) {
-            consumer.accept(response);
-        } else {
-            log.trace("[{}] Unknown or stale rpc response received [{}]", requestId, response);
-        }
-    }
-
-    @Override
-    public void processRpcRequestToDevice(ToDeviceRpcRequest request, Consumer<FromDeviceRpcResponse> responseConsumer) {
-        log.trace("[{}] Processing local rpc call to device [{}]", request.getTenantId(), request.getDeviceId());
-        UUID requestId = request.getId();
-        localToDeviceRpcRequests.put(requestId, responseConsumer);
-        sendRpcRequestToDevice(request);
-        scheduleTimeout(request, requestId, localToDeviceRpcRequests);
-    }
-
-    @Override
-    public void processRpcResponseFromDevice(FromDeviceRpcResponse response) {
-        log.trace("[{}] response to request: [{}]", this.hashCode(), response.getId());
-        if (routingService.getCurrentServer().equals(response.getServerAddress())) {
+    public void processResponseToServerSideRPCRequestFromRuleEngine(ServerAddress requestOriginAddress, FromDeviceRpcResponse response) {
+        log.trace("[{}] Received response to server-side RPC request from rule engine: [{}]", response.getId(), requestOriginAddress);
+        if (routingService.getCurrentServer().equals(requestOriginAddress)) {
             UUID requestId = response.getId();
-            Consumer<FromDeviceRpcResponse> consumer = localToDeviceRpcRequests.remove(requestId);
+            Consumer<FromDeviceRpcResponse> consumer = localToRuleEngineRpcRequests.remove(requestId);
             if (consumer != null) {
                 consumer.accept(response);
             } else {
@@ -138,12 +124,33 @@ public class DefaultDeviceRpcService implements DeviceRpcService {
             } else {
                 builder.setError(-1);
             }
-            rpcService.tell(response.getServerAddress(), ClusterAPIProtos.MessageType.CLUSTER_RPC_FROM_DEVICE_RESPONSE_MESSAGE, builder.build().toByteArray());
+            rpcService.tell(requestOriginAddress, ClusterAPIProtos.MessageType.CLUSTER_RPC_FROM_DEVICE_RESPONSE_MESSAGE, builder.build().toByteArray());
         }
     }
 
     @Override
-    public void processRemoteResponseFromDevice(ServerAddress serverAddress, byte[] data) {
+    public void forwardServerSideRPCRequestToDeviceActor(ToDeviceRpcRequest request, Consumer<FromDeviceRpcResponse> responseConsumer) {
+        log.trace("[{}][{}] Processing local rpc call to device actor [{}]", request.getTenantId(), request.getId(), request.getDeviceId());
+        UUID requestId = request.getId();
+        localToDeviceRpcRequests.put(requestId, responseConsumer);
+        sendRpcRequestToDevice(request);
+        scheduleTimeout(request, requestId, localToDeviceRpcRequests);
+    }
+
+    @Override
+    public void processResponseToServerSideRPCRequestFromDeviceActor(FromDeviceRpcResponse response) {
+        log.trace("[{}] Received response to server-side RPC request from device actor.", response.getId());
+        UUID requestId = response.getId();
+        Consumer<FromDeviceRpcResponse> consumer = localToDeviceRpcRequests.remove(requestId);
+        if (consumer != null) {
+            consumer.accept(response);
+        } else {
+            log.trace("[{}] Unknown or stale rpc response received [{}]", requestId, response);
+        }
+    }
+
+    @Override
+    public void processResponseToServerSideRPCRequestFromRemoteServer(ServerAddress serverAddress, byte[] data) {
         ClusterAPIProtos.FromDeviceRPCResponseProto proto;
         try {
             proto = ClusterAPIProtos.FromDeviceRPCResponseProto.parseFrom(data);
@@ -151,13 +158,12 @@ public class DefaultDeviceRpcService implements DeviceRpcService {
             throw new RuntimeException(e);
         }
         RpcError error = proto.getError() > 0 ? RpcError.values()[proto.getError()] : null;
-        FromDeviceRpcResponse response = new FromDeviceRpcResponse(new UUID(proto.getRequestIdMSB(), proto.getRequestIdLSB()), routingService.getCurrentServer(),
-                proto.getResponse(), error);
-        processRpcResponseFromDevice(response);
+        FromDeviceRpcResponse response = new FromDeviceRpcResponse(new UUID(proto.getRequestIdMSB(), proto.getRequestIdLSB()), proto.getResponse(), error);
+        processResponseToServerSideRPCRequestFromRuleEngine(routingService.getCurrentServer(), response);
     }
 
     @Override
-    public void sendRpcReplyToDevice(TenantId tenantId, DeviceId deviceId, int requestId, String body) {
+    public void sendReplyToRpcCallFromDevice(TenantId tenantId, DeviceId deviceId, int requestId, String body) {
         ToServerRpcResponseActorMsg rpcMsg = new ToServerRpcResponseActorMsg(tenantId, deviceId, new ToServerRpcResponseMsg(requestId, body));
         forward(deviceId, rpcMsg);
     }
@@ -166,8 +172,16 @@ public class DefaultDeviceRpcService implements DeviceRpcService {
         ObjectNode entityNode = json.createObjectNode();
         TbMsgMetaData metaData = new TbMsgMetaData();
         metaData.putValue("requestUUID", msg.getId().toString());
+        metaData.putValue("originHost", routingService.getCurrentServer().getHost());
+        metaData.putValue("originPort", Integer.toString(routingService.getCurrentServer().getPort()));
         metaData.putValue("expirationTime", Long.toString(msg.getExpirationTime()));
         metaData.putValue("oneway", Boolean.toString(msg.isOneway()));
+
+        Device device = deviceService.findDeviceById(msg.getTenantId(), msg.getDeviceId());
+        if (device != null) {
+            metaData.putValue("deviceName", device.getName());
+            metaData.putValue("deviceType", device.getType());
+        }
 
         entityNode.put("method", msg.getBody().getMethod());
         entityNode.put("params", msg.getBody().getParams());
@@ -176,7 +190,7 @@ public class DefaultDeviceRpcService implements DeviceRpcService {
             TbMsg tbMsg = new TbMsg(UUIDs.timeBased(), DataConstants.RPC_CALL_FROM_SERVER_TO_DEVICE, msg.getDeviceId(), metaData, TbMsgDataType.JSON
                     , json.writeValueAsString(entityNode)
                     , null, null, 0L);
-            actorService.onMsg(new ServiceToRuleEngineMsg(msg.getTenantId(), tbMsg));
+            actorService.onMsg(new SendToClusterMsg(msg.getDeviceId(), new ServiceToRuleEngineMsg(msg.getTenantId(), tbMsg)));
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
@@ -199,7 +213,7 @@ public class DefaultDeviceRpcService implements DeviceRpcService {
             log.trace("[{}] timeout the request: [{}]", this.hashCode(), requestId);
             Consumer<FromDeviceRpcResponse> consumer = requestsMap.remove(requestId);
             if (consumer != null) {
-                consumer.accept(new FromDeviceRpcResponse(requestId, null, null, RpcError.TIMEOUT));
+                consumer.accept(new FromDeviceRpcResponse(requestId, null, RpcError.TIMEOUT));
             }
         }, timeout, TimeUnit.MILLISECONDS);
     }

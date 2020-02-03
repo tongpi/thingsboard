@@ -1,5 +1,5 @@
 /**
- * Copyright © 2016-2018 The Thingsboard Authors
+ * Copyright © 2016-2020 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,18 +16,16 @@
 package org.thingsboard.server.actors.device;
 
 import lombok.Data;
-import org.thingsboard.server.common.data.id.SessionId;
-import org.thingsboard.server.common.msg.cluster.ServerAddress;
-import org.thingsboard.server.common.msg.session.SessionType;
+import org.thingsboard.server.gen.transport.TransportProtos;
 
-import java.util.Optional;
+import java.util.UUID;
 
 /**
  * @author Andrew Shvayka
  */
 @Data
 public class ToServerRpcRequestMetadata {
-    private final SessionId sessionId;
-    private final SessionType type;
-    private final Optional<ServerAddress> server;
+    private final UUID sessionId;
+    private final TransportProtos.SessionType type;
+    private final String nodeId;
 }

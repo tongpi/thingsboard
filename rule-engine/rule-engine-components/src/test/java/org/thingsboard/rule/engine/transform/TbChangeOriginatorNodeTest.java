@@ -1,5 +1,5 @@
 /**
- * Copyright © 2016-2018 The Thingsboard Authors
+ * Copyright © 2016-2020 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@ import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
-import org.thingsboard.rule.engine.api.ListeningExecutor;
+import org.thingsboard.common.util.ListeningExecutor;
 import org.thingsboard.rule.engine.api.TbContext;
 import org.thingsboard.rule.engine.api.TbNodeConfiguration;
 import org.thingsboard.rule.engine.api.TbNodeException;
@@ -42,6 +42,8 @@ import org.thingsboard.server.dao.asset.AssetService;
 import java.util.concurrent.Callable;
 
 import static org.junit.Assert.assertEquals;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.eq;
 import static org.mockito.Matchers.same;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -92,7 +94,7 @@ public class TbChangeOriginatorNodeTest {
         TbMsg msg = new TbMsg(UUIDs.timeBased(), "ASSET", assetId, new TbMsgMetaData(), "{}", ruleChainId, ruleNodeId, 0L);
 
         when(ctx.getAssetService()).thenReturn(assetService);
-        when(assetService.findAssetByIdAsync(assetId)).thenReturn(Futures.immediateFuture(asset));
+        when(assetService.findAssetByIdAsync(any(),eq( assetId))).thenReturn(Futures.immediateFuture(asset));
 
         node.onMsg(ctx, msg);
 
@@ -120,7 +122,7 @@ public class TbChangeOriginatorNodeTest {
         TbMsg msg = new TbMsg(UUIDs.timeBased(), "ASSET", assetId, new TbMsgMetaData(), "{}", ruleChainId, ruleNodeId, 0L);
 
         when(ctx.getAssetService()).thenReturn(assetService);
-        when(assetService.findAssetByIdAsync(assetId)).thenReturn(Futures.immediateFuture(asset));
+        when(assetService.findAssetByIdAsync(any(), eq(assetId))).thenReturn(Futures.immediateFuture(asset));
 
         node.onMsg(ctx, msg);
         ArgumentCaptor<TbMsg> msgCaptor = ArgumentCaptor.forClass(TbMsg.class);
@@ -147,7 +149,7 @@ public class TbChangeOriginatorNodeTest {
         TbMsg msg = new TbMsg(UUIDs.timeBased(), "ASSET", assetId, new TbMsgMetaData(), "{}", ruleChainId, ruleNodeId, 0L);
 
         when(ctx.getAssetService()).thenReturn(assetService);
-        when(assetService.findAssetByIdAsync(assetId)).thenReturn(Futures.immediateFuture(null));
+        when(assetService.findAssetByIdAsync(any(), eq(assetId))).thenReturn(Futures.immediateFuture(null));
 
         node.onMsg(ctx, msg);
         verify(ctx).tellNext(same(msg), same(FAILURE));

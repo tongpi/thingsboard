@@ -1,5 +1,5 @@
 /**
- * Copyright © 2016-2018 The Thingsboard Authors
+ * Copyright © 2016-2020 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -86,6 +86,10 @@ public class TbSendRPCRequestNode implements TbNode {
 
             tmp = msg.getMetaData().getValue("requestUUID");
             UUID requestUUID = !StringUtils.isEmpty(tmp) ? UUID.fromString(tmp) : UUIDs.timeBased();
+            tmp = msg.getMetaData().getValue("originHost");
+            String originHost = !StringUtils.isEmpty(tmp) ? tmp : null;
+            tmp = msg.getMetaData().getValue("originPort");
+            int originPort = !StringUtils.isEmpty(tmp) ? Integer.parseInt(tmp) : 0;
 
             tmp = msg.getMetaData().getValue("expirationTime");
             long expirationTime = !StringUtils.isEmpty(tmp) ? Long.parseLong(tmp) : (System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(config.getTimeoutInSeconds()));
@@ -105,6 +109,8 @@ public class TbSendRPCRequestNode implements TbNode {
                     .deviceId(new DeviceId(msg.getOriginator().getId()))
                     .requestId(requestId)
                     .requestUUID(requestUUID)
+                    .originHost(originHost)
+                    .originPort(originPort)
                     .expirationTime(expirationTime)
                     .restApiCall(restApiCall)
                     .build();

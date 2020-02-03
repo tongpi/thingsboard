@@ -1,5 +1,5 @@
 /**
- * Copyright © 2016-2018 The Thingsboard Authors
+ * Copyright © 2016-2020 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -76,6 +76,10 @@ public class TbMsgTypeSwitchNode implements TbNode {
             relationType = "Attributes Updated";
         } else if (msg.getType().equals(DataConstants.ATTRIBUTES_DELETED)) {
             relationType = "Attributes Deleted";
+        } else if (msg.getType().equals(DataConstants.ALARM_ACK)) {
+            relationType = "Alarm Acknowledged";
+        } else if (msg.getType().equals(DataConstants.ALARM_CLEAR)) {
+            relationType = "Alarm Cleared";
         } else if (msg.getType().equals(DataConstants.RPC_CALL_FROM_SERVER_TO_DEVICE)) {
             relationType = "RPC Request to Device";
         } else {

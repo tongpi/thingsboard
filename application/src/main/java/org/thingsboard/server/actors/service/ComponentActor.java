@@ -1,5 +1,5 @@
 /**
- * Copyright © 2016-2018 The Thingsboard Authors
+ * Copyright © 2016-2020 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,6 @@
 package org.thingsboard.server.actors.service;
 
 import akka.actor.ActorRef;
-import akka.event.Logging;
-import akka.event.LoggingAdapter;
 import org.thingsboard.server.actors.ActorSystemContext;
 import org.thingsboard.server.actors.shared.ComponentMsgProcessor;
 import org.thingsboard.server.actors.stats.StatsPersistMsg;
@@ -31,8 +29,6 @@ import org.thingsboard.server.common.msg.plugin.ComponentLifecycleMsg;
  * @author Andrew Shvayka
  */
 public abstract class ComponentActor<T extends EntityId, P extends ComponentMsgProcessor<T>> extends ContextAwareActor {
-
-    protected final LoggingAdapter logger = Logging.getLogger(getContext().system(), this);
 
     private long lastPersistedErrorTs = 0L;
     protected final TenantId tenantId;
@@ -54,13 +50,15 @@ public abstract class ComponentActor<T extends EntityId, P extends ComponentMsgP
     @Override
     public void preStart() {
         try {
+            log.debug("[{}][{}][{}] Starting processor.", tenantId, id, id.getEntityType());
             processor.start(context());
             logLifecycleEvent(ComponentLifecycleEvent.STARTED);
             if (systemContext.isStatisticsEnabled()) {
                 scheduleStatsPersistTick();
             }
         } catch (Exception e) {
-            logger.warning("[{}][{}] Failed to start {} processor: {}", tenantId, id, id.getEntityType(), e);
+            log.warn("[{}][{}] Failed to start {} processor.", tenantId, id, id.getEntityType());
+            log.warn("Error:", e);
             logAndPersist("OnStart", e, true);
             logLifecycleEvent(ComponentLifecycleEvent.STARTED, e);
         }
@@ -70,7 +68,7 @@ public abstract class ComponentActor<T extends EntityId, P extends ComponentMsgP
         try {
             processor.scheduleStatsPersistTick(context(), systemContext.getStatisticsPersistFrequency());
         } catch (Exception e) {
-            logger.error("[{}][{}] Failed to schedule statistics store message. No statistics is going to be stored: {}", tenantId, id, e.getMessage());
+            log.error("[{}][{}] Failed to schedule statistics store message. No statistics is going to be stored: {}", tenantId, id, e.getMessage());
             logAndPersist("onScheduleStatsPersistMsg", e);
         }
     }
@@ -78,16 +76,18 @@ public abstract class ComponentActor<T extends EntityId, P extends ComponentMsgP
     @Override
     public void postStop() {
         try {
+            log.debug("[{}][{}] Stopping processor.", tenantId, id, id.getEntityType());
             processor.stop(context());
             logLifecycleEvent(ComponentLifecycleEvent.STOPPED);
         } catch (Exception e) {
-            logger.warning("[{}][{}] Failed to stop {} processor: {}", tenantId, id, id.getEntityType(), e.getMessage());
+            log.warn("[{}][{}] Failed to stop {} processor: {}", tenantId, id, id.getEntityType(), e.getMessage());
             logAndPersist("OnStop", e, true);
             logLifecycleEvent(ComponentLifecycleEvent.STOPPED, e);
         }
     }
 
     protected void onComponentLifecycleMsg(ComponentLifecycleMsg msg) {
+        log.debug("[{}][{}][{}] onComponentLifecycleMsg: [{}]", tenantId, id, id.getEntityType(), msg.getEvent());
         try {
             switch (msg.getEvent()) {
                 case CREATED:
@@ -147,10 +147,13 @@ public abstract class ComponentActor<T extends EntityId, P extends ComponentMsgP
 
     private void logAndPersist(String method, Exception e, boolean critical) {
         errorsOccurred++;
+        String componentName = processor != null ? processor.getComponentName() : "Unknown";
         if (critical) {
-            logger.warning("[{}][{}] Failed to process {} msg: {}", id, tenantId, method, e);
+            log.warn("[{}][{}][{}] Failed to process {} msg: {}", id, tenantId, componentName, method);
+            log.warn("Critical Error: ", e);
         } else {
-            logger.debug("[{}][{}] Failed to process {} msg: {}", id, tenantId, method, e);
+            log.debug("[{}][{}][{}] Failed to process {} msg: {}", id, tenantId, componentName, method);
+            log.debug("Debug Error: ", e);
         }
         long ts = System.currentTimeMillis();
         if (ts - lastPersistedErrorTs > getErrorPersistFrequency()) {

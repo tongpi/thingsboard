@@ -1,5 +1,5 @@
 /**
- * Copyright © 2016-2018 The Thingsboard Authors
+ * Copyright © 2016-2020 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,13 +29,13 @@ public interface DeviceRpcService {
 
     void processRestAPIRpcRequestToRuleEngine(ToDeviceRpcRequest request, Consumer<FromDeviceRpcResponse> responseConsumer);
 
-    void processRestAPIRpcResponseFromRuleEngine(FromDeviceRpcResponse response);
+    void processResponseToServerSideRPCRequestFromRuleEngine(ServerAddress requestOriginAddress, FromDeviceRpcResponse response);
 
-    void processRpcRequestToDevice(ToDeviceRpcRequest request, Consumer<FromDeviceRpcResponse> responseConsumer);
+    void forwardServerSideRPCRequestToDeviceActor(ToDeviceRpcRequest request, Consumer<FromDeviceRpcResponse> responseConsumer);
 
-    void processRpcResponseFromDevice(FromDeviceRpcResponse response);
+    void processResponseToServerSideRPCRequestFromDeviceActor(FromDeviceRpcResponse response);
 
-    void sendRpcReplyToDevice(TenantId tenantId, DeviceId deviceId, int requestId, String body);
+    void processResponseToServerSideRPCRequestFromRemoteServer(ServerAddress serverAddress, byte[] data);
 
-    void processRemoteResponseFromDevice(ServerAddress serverAddress, byte[] bytes);
+    void sendReplyToRpcCallFromDevice(TenantId tenantId, DeviceId deviceId, int requestId, String body);
 }

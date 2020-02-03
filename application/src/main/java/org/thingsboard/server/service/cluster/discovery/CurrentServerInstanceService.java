@@ -1,5 +1,5 @@
 /**
- * Copyright © 2016-2018 The Thingsboard Authors
+ * Copyright © 2016-2020 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
-import org.thingsboard.server.gen.discovery.ServerInstanceProtos;
+import org.thingsboard.server.common.msg.cluster.ServerAddress;
+import org.thingsboard.server.common.msg.cluster.ServerType;
 
 import javax.annotation.PostConstruct;
 
@@ -43,8 +44,7 @@ public class CurrentServerInstanceService implements ServerInstanceService {
     public void init() {
         Assert.hasLength(rpcHost, missingProperty("rpc.bind_host"));
         Assert.notNull(rpcPort, missingProperty("rpc.bind_port"));
-
-        self = new ServerInstance(ServerInstanceProtos.ServerInfo.newBuilder().setHost(rpcHost).setPort(rpcPort).setTs(System.currentTimeMillis()).build());
+        self = new ServerInstance(new ServerAddress(rpcHost, rpcPort, ServerType.CORE));
         log.info("Current server instance: [{};{}]", self.getHost(), self.getPort());
     }
 

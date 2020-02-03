@@ -1,5 +1,5 @@
 /**
- * Copyright © 2016-2018 The Thingsboard Authors
+ * Copyright © 2016-2020 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,8 +32,11 @@ import org.thingsboard.server.common.data.exception.ThingsboardException;
 import org.thingsboard.server.common.data.id.TenantId;
 import org.thingsboard.server.common.data.page.TextPageData;
 import org.thingsboard.server.common.data.page.TextPageLink;
+import org.thingsboard.server.common.data.plugin.ComponentLifecycleEvent;
 import org.thingsboard.server.dao.tenant.TenantService;
 import org.thingsboard.server.service.install.InstallScripts;
+import org.thingsboard.server.service.security.permission.Operation;
+import org.thingsboard.server.service.security.permission.Resource;
 
 @RestController
 @RequestMapping("/api")
@@ -53,7 +56,7 @@ public class TenantController extends BaseController {
         checkParameter("tenantId", strTenantId);
         try {
             TenantId tenantId = new TenantId(toUUID(strTenantId));
-            checkTenantId(tenantId);
+            checkTenantId(tenantId, Operation.READ);
             return checkNotNull(tenantService.findTenantById(tenantId));
         } catch (Exception e) {
             throw handleException(e);
@@ -66,6 +69,12 @@ public class TenantController extends BaseController {
     public Tenant saveTenant(@RequestBody Tenant tenant) throws ThingsboardException {
         try {
             boolean newTenant = tenant.getId() == null;
+
+            Operation operation = newTenant ? Operation.CREATE : Operation.WRITE;
+
+            accessControlService.checkPermission(getCurrentUser(), Resource.TENANT, operation,
+                    tenant.getId(), tenant);
+
             tenant = checkNotNull(tenantService.saveTenant(tenant));
             if (newTenant) {
                 installScripts.createDefaultRuleChains(tenant.getId());
@@ -83,7 +92,10 @@ public class TenantController extends BaseController {
         checkParameter("tenantId", strTenantId);
         try {
             TenantId tenantId = new TenantId(toUUID(strTenantId));
+            checkTenantId(tenantId, Operation.DELETE);
             tenantService.deleteTenant(tenantId);
+
+            actorService.onEntityStateChange(tenantId, tenantId, ComponentLifecycleEvent.DELETED);
         } catch (Exception e) {
             throw handleException(e);
         }

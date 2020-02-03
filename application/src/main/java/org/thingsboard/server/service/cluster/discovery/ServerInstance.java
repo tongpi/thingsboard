@@ -1,5 +1,5 @@
 /**
- * Copyright © 2016-2018 The Thingsboard Authors
+ * Copyright © 2016-2020 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
 import org.thingsboard.server.common.msg.cluster.ServerAddress;
-import org.thingsboard.server.gen.discovery.ServerInstanceProtos;
 
 /**
  * @author Andrew Shvayka
@@ -39,12 +38,6 @@ public final class ServerInstance implements Comparable<ServerInstance> {
         this.serverAddress = serverAddress;
         this.host = serverAddress.getHost();
         this.port = serverAddress.getPort();
-    }
-
-    public ServerInstance(ServerInstanceProtos.ServerInfo serverInfo) {
-        this.host = serverInfo.getHost();
-        this.port = serverInfo.getPort();
-        this.serverAddress = new ServerAddress(host, port);
     }
 
     @Override
