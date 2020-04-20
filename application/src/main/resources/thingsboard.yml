@@ -208,14 +208,18 @@ sql:
       batch_size: "${SQL_TS_LATEST_BATCH_SIZE:10000}"
       batch_max_delay: "${SQL_TS_LATEST_BATCH_MAX_DELAY_MS:100}"
       stats_print_interval_ms: "${SQL_TS_LATEST_BATCH_STATS_PRINT_MS:10000}"
-    ts_timescale:
-      batch_size: "${SQL_TS_TIMESCALE_BATCH_SIZE:10000}"
-      batch_max_delay: "${SQL_TS_TIMESCALE_BATCH_MAX_DELAY_MS:100}"
-      stats_print_interval_ms: "${SQL_TS_TIMESCALE_BATCH_STATS_PRINT_MS:10000}"
     # Specify whether to remove null characters from strValue of attributes and timeseries before insert
     remove_null_chars: "${SQL_REMOVE_NULL_CHARS:true}"
-    # Specify partitioning size for timestamp key-value storage. Example: DAYS, MONTHS, YEARS, INDEFINITE
-    ts_key_value_partitioning: "${TS_KV_PARTITIONING:MONTHS}"
+    postgres:
+      # Specify partitioning size for timestamp key-value storage. Example: DAYS, MONTHS, YEARS, INDEFINITE.
+      ts_key_value_partitioning: "${SQL_POSTGRES_TS_KV_PARTITIONING:MONTHS}"
+    timescale:
+      # Specify Interval size for new data chunks storage.
+      chunk_time_interval: "${SQL_TIMESCALE_CHUNK_TIME_INTERVAL:604800000}"
+    ttl:
+      enabled: "${SQL_TTL_ENABLED:true}"
+      execution_interval_ms: "${SQL_TTL_EXECUTION_INTERVAL:86400000}" # Number of miliseconds
+      ts_key_value_ttl: "${SQL_TTL_TS_KEY_VALUE_TTL:0}" # Number of seconds
 
 # Actor system parameters
 actors:
@@ -250,9 +254,9 @@ actors:
       error_persist_frequency: "${ACTORS_RULE_NODE_ERROR_FREQUENCY:3000}"
     transaction:
       # Size of queues which store messages for transaction rule nodes
-      queue_size: "${ACTORS_RULE_TRANSACTION_QUEUE_SIZE:20}"
+      queue_size: "${ACTORS_RULE_TRANSACTION_QUEUE_SIZE:15000}"
       # Time in milliseconds for transaction to complete
-      duration: "${ACTORS_RULE_TRANSACTION_DURATION:15000}"
+      duration: "${ACTORS_RULE_TRANSACTION_DURATION:60000}"
   statistics:
     # Enable/disable actor statistics
     enabled: "${ACTORS_STATISTICS_ENABLED:true}"
@@ -300,7 +304,7 @@ caffeine:
 redis:
   # standalone or cluster
   connection:
-    type: standalone
+    type: "${REDIS_CONNECTION_TYPE:standalone}"
   standalone:
     host: "${REDIS_HOST:localhost}"
     port: "${REDIS_PORT:6379}"
